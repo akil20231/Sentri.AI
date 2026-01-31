@@ -53,21 +53,16 @@ async def setchannels(ctx: commands.Context, *channel_ids: int):
 @bot.command()
 @commands.has_permissions(manage_roles=True)
 async def unquarantine(ctx: commands.Context, member: discord.Member):
+    if ctx.guild is None:
+        await ctx.send("Run this command inside a server.")
+        return
+
     role = discord.utils.get(ctx.guild.roles, name=S.quarantine_role_name)
     if role and role in member.roles:
         await member.remove_roles(role, reason="AgentGuard unquarantine")
         await ctx.send(f"✅ Removed quarantine from {member.mention}")
     else:
         await ctx.send("User is not quarantined (or role missing).")
-
-@bot.command()
-async def appeal(ctx: commands.Context):
-    await ctx.send("If you think you were flagged incorrectly, a moderator can review logs in #mod-logs. (Hackathon MVP: no full appeal flow.)")
-
-async def log_to_mod_channel(guild: discord.Guild, embed: discord.Embed):
-    ch = guild.get_channel(S.mod_log_channel_id)
-    if ch:
-        await ch.send(embed=embed)
 
 @bot.event
 async def on_message(message: discord.Message):
@@ -163,7 +158,14 @@ async def on_message(message: discord.Message):
         title=f"AgentGuard decision: {action if not should_challenge else 'challenge'}",
         risk=risk, agent=a_score, harm=h_score, reasons=reasons
     )
-    await log_to_mod_channel(message.guild, emb)
+    
+    async def log_to_mod_channel(guild: discord.Guild, embed: discord.Embed):
+        ch = guild.get_channel(S.mod_log_channel_id)
+
+        if isinstance(ch, (discord.TextChannel, discord.Thread)):
+            await ch.send(embed=embed)
+        else:
+            print(f"[WARN] MOD_LOG_CHANNEL_ID {S.mod_log_channel_id} is not a text channel/thread: {type(ch)}")
 
     # Apply actions
     if should_challenge:
