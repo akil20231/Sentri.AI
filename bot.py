@@ -66,6 +66,7 @@ async def unquarantine(ctx: commands.Context, member: discord.Member):
 
 @bot.event
 async def on_message(message: discord.Message):
+    print("RECV:", message.guild.id if message.guild else None, message.channel.id, message.author.id, repr(message.content[:80]))
     if message.author.bot:
         return
 
